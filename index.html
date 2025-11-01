@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <title>Painting AR</title>
+  <!-- Include A-Frame -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-  <script src="aframe-ar.js"></script> <!-- Local AR.js -->
+  <!-- Local AR.js -->
+  <script src="aframe-ar.js"></script>
   <style>
     body { margin: 0; overflow: hidden; }
   </style>
@@ -14,7 +16,7 @@
     vr-mode-ui="enabled: false"
     embedded
     arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;">
-    
+
     <!-- Marker -->
     <a-marker id="paintingMarker" type="pattern" url="painting.patt">
       <!-- Overlay video -->
@@ -22,11 +24,12 @@
         id="overlayVideo"
         src="#overlayAnim"
         width="1"
-        height="0.667"
+        height="0.667"   <!-- Matches 3:2 aspect ratio of painting -->
         position="0 0 0"
         rotation="-90 0 0"
         autoplay
         loop
+        muted
         scale="1 1 1">
       </a-video>
     </a-marker>
@@ -36,7 +39,7 @@
 
     <!-- Assets -->
     <a-assets>
-      <video id="overlayAnim" src="overlay.mp4" autoplay loop></video>
+      <video id="overlayAnim" src="overlay.mp4" autoplay loop muted></video>
     </a-assets>
   </a-scene>
 </body>
