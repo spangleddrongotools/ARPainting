@@ -13,12 +13,13 @@
     <a-video
   id="overlayVideo"
   src="#overlayAnim"
-  width="1"
-  height="0.667"
-  position="0 0 0"
-  rotation="-90 0 0"
+  width="1"             <!-- Base width -->
+  height="0.667"        <!-- Height = width × (2 ÷ 3) -->
+  position="0 0 0"      <!-- Centered on marker -->
+  rotation="-90 0 0"    <!-- Flat on the painting -->
   autoplay
   loop
+  scale="1 1 1"         <!-- Optional: can adjust overall size -->
 ></a-video>
     </a-marker>
 
