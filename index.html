@@ -3,36 +3,61 @@
 <head>
   <meta charset="UTF-8" />
   <title>AR Painting (Image Tracking)</title>
+
   <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-  <!-- MindAR (image tracking) -->
+  <!-- MindAR for A-Frame (image tracking) -->
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-  <style>body{margin:0;overflow:hidden;}</style>
+
+  <style>
+    html,body{margin:0;height:100%;overflow:hidden;background:#000;}
+    #hud{
+      position:fixed;top:10px;left:10px;z-index:9999;
+      padding:6px 10px;border-radius:8px;color:#fff;background:#0009;
+      font:14px/1.2 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui;
+    }
+  </style>
 </head>
 <body>
+  <!-- tiny debug HUD -->
+  <div id="hud">scanning…</div>
+
+  <!-- MindAR scene: make sure targets.mind sits next to this file -->
   <a-scene
     mindar-image="imageTargetSrc: targets.mind; filterMinCF:0.0001; filterBeta:0.001"
     embedded
     vr-mode-ui="enabled:false"
     device-orientation-permission-ui="enabled:false">
 
+    <!-- Camera -->
     <a-camera look-controls="enabled:false" position="0 0 0"></a-camera>
 
+    <!-- Assets (muted + playsinline helps iOS autoplay) -->
     <a-assets>
       <video id="overlay" src="overlay.mp4" loop autoplay muted playsinline></video>
     </a-assets>
 
-    <!-- Your painting is targetIndex 0 -->
+    <!-- Track the painting (targetIndex:0) and show the overlay video -->
     <a-entity mindar-image-target="targetIndex: 0">
-      <!-- 3:2 aspect to match 90x60 cm -->
+      <!-- 3:2 aspect (width=1.5, height=1.0). Adjust proportionally if needed. -->
       <a-video src="#overlay" width="1.5" height="1.0" position="0 0 0" autoplay loop muted></a-video>
     </a-entity>
 
+    <!-- Play video when target is found + HUD messages -->
     <script>
       document.addEventListener('DOMContentLoaded', () => {
-        const video = document.querySelector('#overlay');
+        const hud   = document.getElementById('hud');
         const scene = document.querySelector('a-scene');
-        scene.addEventListener('targetFound', () => { try { video.play(); } catch(e) {} });
+        const video = document.getElementById('overlay');
+
+        const set = t => hud.textContent = t;
+        set('scanning…');
+
+        scene.addEventListener('targetFound', () => {
+          set('target FOUND');
+          try { video.play(); } catch(e) {}
+        });
+        scene.addEventListener('targetLost',  () => set('target LOST — scanning…'));
       });
     </script>
   </a-scene>
