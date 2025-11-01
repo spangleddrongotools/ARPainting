@@ -10,9 +10,16 @@
 <body>
   <a-scene embedded arjs="trackingMethod: best; sourceType: webcam;">
     <!-- AR Marker -->
-    <a-marker id="paintingMarker" type="pattern" url="painting.patt">
-      <a-video id="overlayVideo" src="#overlayAnim" rotation="-90 0 0" autoplay loop muted
-               width="1.45" height="0.967" position="0 0 0"></a-video>
+    <a-video
+  id="overlayVideo"
+  src="#overlayAnim"
+  width="1"
+  height="0.667"
+  position="0 0 0"
+  rotation="-90 0 0"
+  autoplay
+  loop
+></a-video>
     </a-marker>
 
     <!-- Camera -->
