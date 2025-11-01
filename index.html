@@ -2,56 +2,30 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>AR Painting</title>
+  <title>Painting AR</title>
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
-  <style>body{margin:0;overflow:hidden;}</style>
+  <script src="https://cdn.jsdelivr.net/npm/aframe-ar@1.0.0/dist/aframe-ar.min.js"></script>
+  <style>body { margin: 0; overflow: hidden; }</style>
 </head>
 <body>
-  <a-scene embedded arjs="trackingMethod: best; sourceType: webcam;">
-    <!-- AR Marker -->
-    <a-video
-  id="overlayVideo"
-  src="#overlayAnim"
-  width="1"             <!-- Base width -->
-  height="0.667"        <!-- Height = width × (2 ÷ 3) -->
-  position="0 0 0"      <!-- Centered on marker -->
-  rotation="-90 0 0"    <!-- Flat on the painting -->
-  autoplay
-  loop
-  scale="1 1 1"         <!-- Optional: can adjust overall size -->
-></a-video>
+  <a-scene vr-mode-ui="enabled: false" embedded
+           arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;">
+    <a-marker id="paintingMarker" type="pattern" url="painting.patt">
+      <a-video id="overlayVideo"
+               src="#overlayAnim"
+               width="1"
+               height="0.667"
+               position="0 0 0"
+               rotation="-90 0 0"
+               autoplay
+               loop
+               scale="1 1 1">
+      </a-video>
     </a-marker>
-
-    <!-- Camera -->
     <a-entity camera></a-entity>
-
-    <!-- Assets -->
     <a-assets>
-      <video id="overlayAnim" src="overlay.mp4" autoplay loop muted></video>
+      <video id="overlayAnim" src="overlay.mp4" autoplay loop></video>
     </a-assets>
-
-    <!-- Auto-scale overlay slightly smaller than marker -->
-    <script>
-      AFRAME.registerComponent('scale-with-marker', {
-        init: function () {
-          const marker = document.querySelector('#paintingMarker');
-          const video = document.querySelector('#overlayVideo');
-
-          marker.addEventListener('markerFound', () => {
-            video.setAttribute('width', 0.96);  // 96% of marker width
-            video.setAttribute('height', 0.64); // maintain 1.5:1 ratio
-          });
-
-          marker.addEventListener('markerLost', () => {
-            video.setAttribute('width', 1.45);  // back to initial size
-            video.setAttribute('height', 0.967);
-          });
-        }
-      });
-
-      document.querySelector('a-scene').setAttribute('scale-with-marker', '');
-    </script>
   </a-scene>
 </body>
 </html>
