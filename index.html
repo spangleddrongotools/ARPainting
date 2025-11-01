@@ -7,8 +7,10 @@
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
   <style>
     html,body { margin:0; height:100%; overflow:hidden; background:#000; }
-    /* IMPORTANT: let the camera video show through the canvas */
+    /* let the camera video show through the WebGL canvas */
     canvas { background: transparent !important; }
+    /* avoid accidental full-screen overlays that hide camera */
+    a-scene, a-canvas { position: static !important; }
     #hud{ position:fixed; top:10px; left:10px; z-index:9999; padding:6px 10px; border-radius:8px;
           color:#fff; background:#0009; font:14px/1.2 -apple-system,BlinkMacSystemFont,Segoe UI,system-ui;}
   </style>
@@ -18,8 +20,7 @@
 
   <a-scene
     mindar-image="imageTargetSrc: targets.mind; uiLoading:false; uiError:false; uiScanning:false; maxTrack:1"
-    color-space="sRGB"
-    renderer="alpha:true; colorManagement:true; physicallyCorrectLights:true"
+    renderer="alpha:true; colorManagement:true"
     vr-mode-ui="enabled:false"
     device-orientation-permission-ui="enabled:false">
 
@@ -29,14 +30,11 @@
 
     <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
 
-    <!-- Use a video-textured plane, sized to 3:2 -->
+    <!-- Track your painting, draw a 3:2 plane textured with the video -->
     <a-entity mindar-image-target="targetIndex: 0">
-      <a-plane
-        src="#overlay"
-        material="shader: flat; src: #overlay; transparent: false"
-        width="1" height="0.667"
-        position="0 0 0" rotation="0 0 0">
-      </a-plane>
+      <a-entity geometry="primitive: plane; width: 1; height: 0.667"
+                material="shader: flat; src: #overlay; transparent: false"
+                position="0 0 0" rotation="0 0 0"></a-entity>
     </a-entity>
 
     <script>
