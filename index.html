@@ -1,46 +1,40 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Painting AR</title>
-  <!-- Include A-Frame -->
+  <meta charset="UTF-8" />
+  <title>AR Painting (Image Tracking)</title>
+  <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-  <!-- Local AR.js -->
-  <script src="aframe-ar.js"></script>
-  <style>
-    body { margin: 0; overflow: hidden; }
-  </style>
+  <!-- MindAR (image tracking) -->
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+  <style>body{margin:0;overflow:hidden;}</style>
 </head>
 <body>
   <a-scene
-    vr-mode-ui="enabled: false"
+    mindar-image="imageTargetSrc: targets.mind; filterMinCF:0.0001; filterBeta:0.001"
     embedded
-    arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;">
+    vr-mode-ui="enabled:false"
+    device-orientation-permission-ui="enabled:false">
 
-    <!-- Marker -->
-    <a-marker id="paintingMarker" type="pattern" url="painting.patt">
-      <!-- Overlay video -->
-      <a-video
-        id="overlayVideo"
-        src="#overlayAnim"
-        width="1"
-        height="0.667"   <!-- Matches 3:2 aspect ratio of painting -->
-        position="0 0 0"
-        rotation="-90 0 0"
-        autoplay
-        loop
-        muted
-        scale="1 1 1">
-      </a-video>
-    </a-marker>
+    <a-camera look-controls="enabled:false" position="0 0 0"></a-camera>
 
-    <!-- Camera -->
-    <a-entity camera></a-entity>
-
-    <!-- Assets -->
     <a-assets>
-      <video id="overlayAnim" src="overlay.mp4" autoplay loop muted></video>
+      <video id="overlay" src="overlay.mp4" loop autoplay muted playsinline></video>
     </a-assets>
+
+    <!-- Your painting is targetIndex 0 -->
+    <a-entity mindar-image-target="targetIndex: 0">
+      <!-- 3:2 aspect to match 90x60 cm -->
+      <a-video src="#overlay" width="1.5" height="1.0" position="0 0 0" autoplay loop muted></a-video>
+    </a-entity>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const video = document.querySelector('#overlay');
+        const scene = document.querySelector('a-scene');
+        scene.addEventListener('targetFound', () => { try { video.play(); } catch(e) {} });
+      });
+    </script>
   </a-scene>
 </body>
 </html>
