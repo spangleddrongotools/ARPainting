@@ -4,25 +4,37 @@
   <meta charset="UTF-8">
   <title>Painting AR</title>
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/aframe-ar@1.0.0/dist/aframe-ar.min.js"></script>
-  <style>body { margin: 0; overflow: hidden; }</style>
+  <script src="aframe-ar.js"></script> <!-- Local AR.js -->
+  <style>
+    body { margin: 0; overflow: hidden; }
+  </style>
 </head>
 <body>
-  <a-scene vr-mode-ui="enabled: false" embedded
-           arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;">
+  <a-scene
+    vr-mode-ui="enabled: false"
+    embedded
+    arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;">
+    
+    <!-- Marker -->
     <a-marker id="paintingMarker" type="pattern" url="painting.patt">
-      <a-video id="overlayVideo"
-               src="#overlayAnim"
-               width="1"
-               height="0.667"
-               position="0 0 0"
-               rotation="-90 0 0"
-               autoplay
-               loop
-               scale="1 1 1">
+      <!-- Overlay video -->
+      <a-video
+        id="overlayVideo"
+        src="#overlayAnim"
+        width="1"
+        height="0.667"
+        position="0 0 0"
+        rotation="-90 0 0"
+        autoplay
+        loop
+        scale="1 1 1">
       </a-video>
     </a-marker>
+
+    <!-- Camera -->
     <a-entity camera></a-entity>
+
+    <!-- Assets -->
     <a-assets>
       <video id="overlayAnim" src="overlay.mp4" autoplay loop></video>
     </a-assets>
