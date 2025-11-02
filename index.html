@@ -11,39 +11,30 @@
 
   <style>
     html,body{margin:0;height:100%;overflow:hidden;background:transparent;}
-    /* let the camera video show behind WebGL */
     canvas{background:transparent !important;}
     #hud{position:fixed;top:10px;left:10px;z-index:9999;padding:6px 10px;border-radius:8px;
          color:#fff;background:#0009;font:14px/1.2 -apple-system,BlinkMacSystemFont,Segoe UI,system-ui;}
+    #tuner{position:fixed;right:10px;top:10px;z-index:9999;background:#0009;color:#fff;
+           padding:6px 10px;border-radius:8px;display:flex;gap:8px;align-items:center;}
+    #tuner button{padding:2px 8px;border-radius:6px;border:0;background:#222;color:#fff}
   </style>
 
   <script>
     // ---- tweak here if needed ----
-    const PLANE_WIDTH  = 1.0;    // keep at 1.0 to match MindAR target width
-    const PLANE_HEIGHT = 1.35;  // 3:2 aspect; try 0.64..0.70 to fine-tune
-    const ROT_Y        = 0;      // if the overlay is flipped, use 180
+    const PLANE_WIDTH  = 1.0;     // keep 1.0 to match MindAR target width
+    const PLANE_HEIGHT = 1.45;    // start taller; tune with buttons (range 0.5..2.0)
+    const ROT_Y        = 0;       // set to 180 if mirrored
     // --------------------------------
   </script>
 </head>
 <body>
   <div id="hud">scanning…</div>
-<div id="tuner" style="position:fixed;right:10px;top:10px;z-index:9999;background:#0009;color:#fff;padding:6px 10px;border-radius:8px;">
-  <div>height: <span id="hval">1.35</span></div>
-  <button id="hdown">–</button>
-  <button id="hup">+</button>
-</div>
-<script>
-  document.addEventListener('DOMContentLoaded', ()=>{
-    const plane = document.getElementById('vidPlane');
-    const hval = document.getElementById('hval');
-    let h = parseFloat(hval.textContent);
-    const setH = v => {
-  h = Math.max(0.5, Math.min(2.0, v));   // was 1.2
-  hval.textContent = h.toFixed(3);
-  plane.setAttribute('geometry', `primitive: plane; width: 1; height: ${h}`);
-};
 
-</script>
+  <div id="tuner">
+    <span>height: <span id="hval">1.450</span></span>
+    <button id="hdown">–</button>
+    <button id="hup">+</button>
+  </div>
 
   <a-scene
     mindar-image="imageTargetSrc: targets.mind; uiLoading:false; uiError:false; uiScanning:false; maxTrack:1"
@@ -59,11 +50,10 @@
 
     <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
 
-    <!-- Painting target -->
     <a-entity id="target" mindar-image-target="targetIndex:0">
-      <!-- 3:2 plane textured with your video -->
+      <!-- initial geometry uses the same starting height -->
       <a-entity id="vidPlane"
-        geometry="primitive: plane; width: 1; height: 1.35"
+        geometry="primitive: plane; width: 1; height: 1.45"
         material="shader: flat; src: #overlay; transparent: false"
         position="0 0 0" rotation="0 0 0">
       </a-entity>
@@ -76,14 +66,28 @@
         const video = document.getElementById('overlay');
         const plane = document.getElementById('vidPlane');
 
-        // apply tweakable values
+        // apply base tweaks
         plane.setAttribute('geometry', `primitive: plane; width: ${PLANE_WIDTH}; height: ${PLANE_HEIGHT}`);
         plane.setAttribute('rotation', `0 ${ROT_Y} 0`);
 
+        // tuner
+        const hval  = document.getElementById('hval');
+        const down  = document.getElementById('hdown');
+        const up    = document.getElementById('hup');
+        let h = PLANE_HEIGHT;
+
+        const setH = v => {
+          h = Math.max(0.5, Math.min(2.0, v));
+          hval.textContent = h.toFixed(3);
+          plane.setAttribute('geometry', `primitive: plane; width: ${PLANE_WIDTH}; height: ${h}`);
+        };
+        setH(h);
+        down.onclick = ()=> setH(h - 0.02);
+        up.onclick   = ()=> setH(h + 0.02);
+
+        // HUD + iOS autoplay kick
         const set = t => hud.textContent = t;
         set('scanning…');
-
-        // iOS: kick video on target found or first touch
         scene.addEventListener('targetFound', ()=>{ set('target FOUND'); try{ video.play(); }catch(e){} });
         scene.addEventListener('targetLost',  ()=> set('target LOST — scanning…'));
         window.addEventListener('touchstart', ()=>{ try{ video.play(); }catch(e){} }, {once:true});
