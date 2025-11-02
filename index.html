@@ -20,7 +20,7 @@
   <script>
     // ---- tweak here if needed ----
     const PLANE_WIDTH  = 1.0;    // keep at 1.0 to match MindAR target width
-    const PLANE_HEIGHT = 0.667;  // 3:2 aspect; try 0.64..0.70 to fine-tune
+    const PLANE_HEIGHT = 1.35;  // 3:2 aspect; try 0.64..0.70 to fine-tune
     const ROT_Y        = 0;      // if the overlay is flipped, use 180
     // --------------------------------
   </script>
@@ -28,7 +28,7 @@
 <body>
   <div id="hud">scanning…</div>
 <div id="tuner" style="position:fixed;right:10px;top:10px;z-index:9999;background:#0009;color:#fff;padding:6px 10px;border-radius:8px;">
-  <div>height: <span id="hval">0.667</span></div>
+  <div>height: <span id="hval">1.35</span></div>
   <button id="hdown">–</button>
   <button id="hup">+</button>
 </div>
@@ -37,11 +37,12 @@
     const plane = document.getElementById('vidPlane');
     const hval = document.getElementById('hval');
     let h = parseFloat(hval.textContent);
-    const setH = v => { h = Math.max(0.5, Math.min(1.2, v)); hval.textContent = h.toFixed(3);
-      plane.setAttribute('geometry', `primitive: plane; width: 1; height: ${h}`); };
-    document.getElementById('hdown').onclick = ()=> setH(h - 0.02);
-    document.getElementById('hup').onclick   = ()=> setH(h + 0.02);
-  });
+    const setH = v => {
+  h = Math.max(0.5, Math.min(2.0, v));   // was 1.2
+  hval.textContent = h.toFixed(3);
+  plane.setAttribute('geometry', `primitive: plane; width: 1; height: ${h}`);
+};
+
 </script>
 
   <a-scene
@@ -62,7 +63,7 @@
     <a-entity id="target" mindar-image-target="targetIndex:0">
       <!-- 3:2 plane textured with your video -->
       <a-entity id="vidPlane"
-        geometry="primitive: plane; width: 1; height: 0.667"
+        geometry="primitive: plane; width: 1; height: 1.35"
         material="shader: flat; src: #overlay; transparent: false"
         position="0 0 0" rotation="0 0 0">
       </a-entity>
