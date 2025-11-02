@@ -27,6 +27,22 @@
 </head>
 <body>
   <div id="hud">scanning…</div>
+<div id="tuner" style="position:fixed;right:10px;top:10px;z-index:9999;background:#0009;color:#fff;padding:6px 10px;border-radius:8px;">
+  <div>height: <span id="hval">0.667</span></div>
+  <button id="hdown">–</button>
+  <button id="hup">+</button>
+</div>
+<script>
+  document.addEventListener('DOMContentLoaded', ()=>{
+    const plane = document.getElementById('vidPlane');
+    const hval = document.getElementById('hval');
+    let h = parseFloat(hval.textContent);
+    const setH = v => { h = Math.max(0.5, Math.min(1.2, v)); hval.textContent = h.toFixed(3);
+      plane.setAttribute('geometry', `primitive: plane; width: 1; height: ${h}`); };
+    document.getElementById('hdown').onclick = ()=> setH(h - 0.02);
+    document.getElementById('hup').onclick   = ()=> setH(h + 0.02);
+  });
+</script>
 
   <a-scene
     mindar-image="imageTargetSrc: targets.mind; uiLoading:false; uiError:false; uiScanning:false; maxTrack:1"
