@@ -21,7 +21,7 @@
       z-index:9999;padding:10px 20px;border:none;border-radius:8px;
       background:#000c;color:#fff;font-size:16px;
     }
-    a-scene {opacity:0;transition:opacity 1s ease;}
+    a-scene {opacity:0;transition:opacity 600ms ease;}
     a-scene.visible {opacity:1;}
   </style>
 </head>
@@ -38,7 +38,8 @@
     device-orientation-permission-ui="enabled:false">
 
     <a-assets>
-      <video id="overlay" src="overlay.mp4" autoplay loop muted playsinline webkit-playsinline></video>
+      <!-- IMPORTANT: no autoplay/loop/muted here; we control in JS -->
+      <video id="overlay" src="overlay.mp4" preload="auto" playsinline webkit-playsinline></video>
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
@@ -55,24 +56,39 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const scene = document.querySelector('a-scene');
-      const video = document.getElementById('overlay');
-      const hud = document.getElementById('hud');
-      const closeBtn = document.getElementById('closeBtn');
-      const setHUD = msg => hud.textContent = msg;
+      const scene   = document.querySelector('a-scene');
+      const target  = document.getElementById('target');     // <-- listen here
+      const video   = document.getElementById('overlay');
+      const hud     = document.getElementById('hud');
+      const closeBtn= document.getElementById('closeBtn');
+      const setHUD  = msg => hud.textContent = msg;
+
+      // iOS safety: make sure inline playback is allowed
+      video.setAttribute('playsinline','true');
+      video.setAttribute('webkit-playsinline','true');
 
       let playedOnce = false;
 
-      // when the target is found
-      scene.addEventListener('targetFound', () => {
-        setHUD('target FOUND — animation starting');
+      // Start when the marker is found
+      target.addEventListener('targetFound', async () => {
+        setHUD('target FOUND — starting animation');
         scene.classList.add('visible');
 
-        video.currentTime = 0;
-        video.muted = false;
-        video.play().catch(()=>{});
+        try {
+          video.loop = false;       // stop after first run
+          video.muted = false;      // enable audio
+          video.currentTime = 0;    // rewind
+          await video.play();       // try to play (may throw on iOS if no gesture)
+        } catch (e) {
+          // Fallback: ask for a single tap to start
+          setHUD('tap anywhere to start animation (audio)');
+          const tapOnce = () => {
+            video.play().then(()=> setHUD('playing…')).catch(()=> setHUD('tap again to start…'));
+            document.body.removeEventListener('click', tapOnce, {once:true});
+          };
+          document.body.addEventListener('click', tapOnce, {once:true});
+        }
 
-        // stop after first loop
         if (!playedOnce) {
           playedOnce = true;
           video.addEventListener('ended', () => {
@@ -82,18 +98,21 @@
         }
       });
 
-      scene.addEventListener('targetLost', () => setHUD('target LOST — scanning…'));
+      target.addEventListener('targetLost', () => setHUD('target LOST — scanning…'));
 
+      // Close safely: pause video and stop camera
       closeBtn.addEventListener('click', () => {
         setHUD('closing safely…');
-        video.pause();
-        // fully stop camera feed
-        scene.renderer.xr.getCamera().children.forEach(cam => {
-          if (cam.el && cam.el.components['mindar-image']) {
-            cam.el.components['mindar-image'].stop();
-          }
-        });
-        setTimeout(() => window.location.reload(), 1000);
+        try { video.pause(); } catch(e){}
+        try {
+          const sys = scene.systems['mindar-image-system'];
+          if (sys && typeof sys.stop === 'function') sys.stop();
+          const camVideo = sys?.video;
+          const stream = camVideo?.srcObject || camVideo?.el?.srcObject || null;
+          if (stream && stream.getTracks) stream.getTracks().forEach(t=>t.stop());
+        } catch(e){}
+        scene.style.display = 'none';
+        setTimeout(()=>{ setHUD('closed'); }, 200);
       });
 
       setHUD('scanning…');
