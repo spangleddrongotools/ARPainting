@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <title>AR Painting — Animation Launch</title>
+  <title>AR Painting — Animation</title>
 
   <!-- A-Frame and MindAR -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
@@ -11,6 +11,7 @@
   <style>
     html, body {margin:0;height:100%;overflow:hidden;background:transparent;}
     canvas {background:transparent !important;}
+
     #hud {
       position:fixed;top:10px;left:10px;z-index:9999;
       color:#fff;background:#0009;padding:6px 10px;border-radius:8px;
@@ -23,12 +24,56 @@
     }
     a-scene {opacity:0;transition:opacity 600ms ease;}
     a-scene.visible {opacity:1;}
+
+    /* Disclaimer modal */
+    #disclaimer {
+      position:fixed;inset:0;z-index:10000;
+      display:flex;align-items:center;justify-content:center;
+      background:rgba(0,0,0,0.6);
+    }
+    #card {
+      width:min(92vw,560px);
+      background:#111; color:#fff; border-radius:14px; padding:18px 16px;
+      box-shadow:0 8px 30px rgba(0,0,0,.4);
+      font:15px/1.4 -apple-system,BlinkMacSystemFont,Segoe UI,system-ui;
+    }
+    #card h1 {font-size:18px;margin:0 0 8px;}
+    #card p {margin:6px 0;}
+    #card .opts {margin:10px 0 12px;}
+    #card label {display:flex;gap:10px;align-items:center;margin:8px 0;}
+    #card input[type="checkbox"] {width:18px;height:18px;accent-color:#ffd54d;}
+    #startBtn {
+      width:100%;padding:12px;border:0;border-radius:10px;
+      background:#ffd54d;color:#000;font-weight:700;font-size:16px;
+    }
+    #small {
+      margin-top:10px;font-size:12px;color:#ddd;
+    }
   </style>
 </head>
 <body>
-  <div id="hud">scanning…</div>
-  <button id="closeBtn">Close safely</button>
+  <!-- HUD + Close -->
+  <div id="hud" aria-live="polite">scanning…</div>
+  <button id="closeBtn" aria-label="Close AR and stop camera">Close safely</button>
 
+  <!-- DISCLAIMER MODAL -->
+  <div id="disclaimer" role="dialog" aria-modal="true" aria-labelledby="dl-title" aria-describedby="dl-desc">
+    <div id="card">
+      <h1 id="dl-title">Heads up: sound & flashing imagery</h1>
+      <p id="dl-desc">
+        This animation includes <strong>thunder audio</strong> and <strong>brief flashing light effects</strong>.
+        Consider lowering your volume. If you are photosensitive, you can reduce flashes below.
+      </p>
+      <div class="opts">
+        <label><input type="checkbox" id="optMute"> Start with <strong>sound muted</strong></label>
+        <label><input type="checkbox" id="optReduce"> <strong>Reduce flashes</strong> (dim visuals)</label>
+      </div>
+      <button id="startBtn">I understand — start</button>
+      <p id="small">Tip: hold your device steady and point at the same painting you scanned to begin.</p>
+    </div>
+  </div>
+
+  <!-- AR Scene -->
   <a-scene
     mindar-image="imageTargetSrc: targets.mind; uiLoading:false; uiError:false; uiScanning:false; maxTrack:1"
     color-space="sRGB"
@@ -38,7 +83,7 @@
     device-orientation-permission-ui="enabled:false">
 
     <a-assets>
-      <!-- IMPORTANT: no autoplay/loop/muted here; we control in JS -->
+      <!-- No autoplay/loop/muted here; we control it in JS after consent -->
       <video id="overlay" src="overlay.mp4" preload="auto" playsinline webkit-playsinline></video>
     </a-assets>
 
@@ -56,41 +101,57 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const scene   = document.querySelector('a-scene');
-      const target  = document.getElementById('target');     // <-- listen here
-      const video   = document.getElementById('overlay');
-      const hud     = document.getElementById('hud');
-      const closeBtn= document.getElementById('closeBtn');
-      const setHUD  = msg => hud.textContent = msg;
+      const scene    = document.querySelector('a-scene');
+      const target   = document.getElementById('target');
+      const video    = document.getElementById('overlay');
+      const plane    = document.getElementById('vidPlane');
+      const hud      = document.getElementById('hud');
+      const closeBtn = document.getElementById('closeBtn');
+      const dlg      = document.getElementById('disclaimer');
+      const startBtn = document.getElementById('startBtn');
+      const optMute  = document.getElementById('optMute');
+      const optReduce= document.getElementById('optReduce');
 
-      // iOS safety: make sure inline playback is allowed
-      video.setAttribute('playsinline','true');
-      video.setAttribute('webkit-playsinline','true');
+      const setHUD = msg => hud.textContent = msg;
 
-      let playedOnce = false;
+      // Consent gate
+      let consentGiven = false;
+      startBtn.addEventListener('click', () => {
+        consentGiven = true;
+        // Apply options
+        video.muted = !!optMute.checked;
+        if (optReduce.checked) {
+          // Dim visuals by tinting the material color (multiplies texture)
+          plane.setAttribute('material', 'shader: flat; src: #overlay; color: #cccccc; transparent:false');
+        }
+        dlg.style.display = 'none';
+        setHUD('scanning…');
+      });
 
-      // Start when the marker is found
+      // Play when the marker is found (only after consent)
+      let wiredEnded = false;
       target.addEventListener('targetFound', async () => {
+        if (!consentGiven) { setHUD('accept disclaimer to start'); return; }
+
         setHUD('target FOUND — starting animation');
         scene.classList.add('visible');
 
         try {
-          video.loop = false;       // stop after first run
-          video.muted = false;      // enable audio
-          video.currentTime = 0;    // rewind
-          await video.play();       // try to play (may throw on iOS if no gesture)
+          video.loop = false;      // stop after first run
+          video.currentTime = 0;   // rewind
+          await video.play();      // may still need a tap on iOS
         } catch (e) {
-          // Fallback: ask for a single tap to start
+          // Fallback: one-time tap
           setHUD('tap anywhere to start animation (audio)');
           const tapOnce = () => {
-            video.play().then(()=> setHUD('playing…')).catch(()=> setHUD('tap again to start…'));
+            video.play().then(() => setHUD('playing…')).catch(()=> setHUD('tap again to start…'));
             document.body.removeEventListener('click', tapOnce, {once:true});
           };
           document.body.addEventListener('click', tapOnce, {once:true});
         }
 
-        if (!playedOnce) {
-          playedOnce = true;
+        if (!wiredEnded) {
+          wiredEnded = true;
           video.addEventListener('ended', () => {
             setHUD('animation complete');
             closeBtn.style.display = 'block';
@@ -98,9 +159,12 @@
         }
       });
 
-      target.addEventListener('targetLost', () => setHUD('target LOST — scanning…'));
+      target.addEventListener('targetLost', () => {
+        if (!consentGiven) return;
+        setHUD('target LOST — scanning…');
+      });
 
-      // Close safely: pause video and stop camera
+      // Close safely: pause video, stop camera feed completely
       closeBtn.addEventListener('click', () => {
         setHUD('closing safely…');
         try { video.pause(); } catch(e){}
@@ -112,7 +176,7 @@
           if (stream && stream.getTracks) stream.getTracks().forEach(t=>t.stop());
         } catch(e){}
         scene.style.display = 'none';
-        setTimeout(()=>{ setHUD('closed'); }, 200);
+        setTimeout(()=>{ setHUD('closed'); }, 250);
       });
 
       setHUD('scanning…');
