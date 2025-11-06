@@ -11,60 +11,85 @@
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
-    html,body {
+    html,body{
       margin:0;height:100%;overflow:hidden;background:transparent;
       font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,sans-serif;
     }
     canvas{background:transparent!important;}
 
-    /* translucent brand overlay */
+    /* translucent intro for consent + audio gesture */
     #intro{
-      position:fixed;inset:0;
-      background:rgba(0,0,0,0.55);
-      display:flex;flex-direction:column;
-      justify-content:center;align-items:center;
-      color:#f5f3e7;text-align:center;padding:2rem;z-index:9999;
-      backdrop-filter:blur(4px);
+      position:fixed;inset:0;background:rgba(0,0,0,0.55);
+      display:flex;flex-direction:column;justify-content:center;align-items:center;
+      color:#f5f3e7;text-align:center;padding:2rem;z-index:9999;backdrop-filter:blur(4px);
     }
     #intro h2{color:#f8d36f;margin-bottom:.5em;}
-    #intro p{max-width:480px;margin:.3em 0;}
+    #intro p{max-width:520px;margin:.35em auto;}
     #intro label{display:block;margin-top:.5em;}
     #startBtn{
-      margin-top:1.5em;padding:10px 24px;font-size:1rem;
-      border:none;border-radius:8px;
+      margin-top:1.2em;padding:10px 24px;font-size:1rem;border:none;border-radius:8px;
       background:#00797a;color:#fff;cursor:pointer;transition:background .2s;
     }
     #startBtn:hover{background:#009e9f;}
+
     #hud{
       position:fixed;top:10px;left:10px;z-index:9000;
-      padding:6px 10px;border-radius:8px;
-      background:rgba(0,0,0,0.5);color:#fff;font-size:14px;
+      padding:6px 10px;border-radius:8px;background:rgba(0,0,0,0.5);
+      color:#fff;font-size:14px;
     }
+
+    /* close overlay after first loop */
+    #closer{
+      position:fixed;inset:0;display:none;z-index:9998;
+      background:rgba(0,0,0,0.6);color:#fff;text-align:center;
+      align-items:center;justify-content:center;flex-direction:column;gap:12px;
+      padding:2rem;backdrop-filter:blur(2px);
+    }
+    #closeBtn,#restartBtn{
+      padding:10px 18px;border:none;border-radius:8px;cursor:pointer;
+      background:#00797a;color:#fff;font-size:1rem;
+    }
+    #restartBtn{background:#3a3a3a;}
   </style>
 
   <script>
-    const PLANE_WIDTH=1.0;
-    const PLANE_HEIGHT=1.57;
-    const ROT_Y=0;
+    // geometry + fade settings
+    const PLANE_WIDTH  = 1.0;
+    const PLANE_HEIGHT = 1.57;      // tuned to your painting
+    const ROT_Y        = 0;
+    const DEFAULT_FADE_MS = 450;
+    const REDUCED_FADE_MS = 150;
   </script>
 </head>
 <body>
 
   <!-- Accessibility / Consent Intro -->
-  <div id="intro">
-    <h2>⚠️  Accessibility & Safety Notice</h2>
-    <p>This animation includes <strong>flashing lights</strong> and <strong>sound effects</strong>.</p>
-    <p>Please ensure you're in a comfortable, safe environment before continuing.</p>
-    <p>When ready, tap <strong>Start</strong> and point your camera at the same painting that the QR code is on.</p>
+  <div id="intro" role="dialog" aria-modal="true" aria-labelledby="title" aria-describedby="desc">
+    <h2 id="title">⚠️ Accessibility & Safety Notice</h2>
+    <p id="desc">This animation includes <strong>flashing lights</strong> and <strong>sound effects</strong>. Please ensure you’re in a comfortable, safe environment before continuing.</p>
+    <p>Tap <strong>Start</strong> to enable sound and camera, then point at the same painting that the QR code is on.</p>
     <label><input type="checkbox" id="muteAudio"> Mute sound</label>
     <label><input type="checkbox" id="reduceMotion"> Reduce flashing effects</label>
     <button id="startBtn">Start Animation</button>
   </div>
 
-  <div id="hud">scanning…</div>
+  <div id="hud" aria-live="polite">scanning…</div>
+
+  <!-- Post-loop close UI -->
+  <div id="closer" role="dialog" aria-modal="true" aria-label="Close animation">
+    <div style="max-width:520px">
+      <h3 style="margin:0 0 .5rem 0">Animation complete</h3>
+      <p style="opacity:.9;margin:.25rem 0 1rem 0">You can safely close now. Camera will be turned off.</p>
+    </div>
+    <div>
+      <button id="closeBtn">Close Animation</button>
+      <button id="restartBtn" title="Restart without reloading">Restart</button>
+    </div>
+  </div>
 
   <!-- Hidden until Start -->
   <a-scene
+    id="scene"
     style="display:none;"
     mindar-image="imageTargetSrc: targets.mind; filterMinCF:0.0001; filterBeta:0.01; uiLoading:false; uiError:false; uiScanning:false; maxTrack:1"
     color-space="sRGB"
@@ -74,46 +99,128 @@
     device-orientation-permission-ui="enabled:false">
 
     <a-assets>
-      <video id="overlay" src="overlay.mp4" autoplay loop muted playsinline webkit-playsinline></video>
+      <!-- cache-bust so devices don’t reuse old video -->
+      <video id="overlay" src="overlay.mp4?v=3" autoplay playsinline webkit-playsinline></video>
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
 
+    <!-- Target / overlay plane -->
     <a-entity id="target" mindar-image-target="targetIndex:0">
       <a-entity id="vidPlane"
         geometry="primitive:plane;width:1;height:1.57"
-        material="shader:flat;src:#overlay;transparent:false"
-        position="0 0 0" rotation="0 0 0">
+        material="shader:flat;src:#overlay;transparent:true;opacity:0"
+        position="0 0 0" rotation="0 0 0"
+        animation__fadein="property: material.opacity; from: 0; to: 1; dur: 450; easing: easeOutQuad; startEvents: startfade"
+        animation__fadeout="property: material.opacity; to: 0; dur: 350; easing: easeInQuad; startEvents: startfadeout">
       </a-entity>
     </a-entity>
 
     <script>
       document.addEventListener('DOMContentLoaded',()=>{
-        const intro=document.getElementById('intro');
-        const start=document.getElementById('startBtn');
-        const scene=document.querySelector('a-scene');
-        const hud=document.getElementById('hud');
-        const video=document.getElementById('overlay');
-        const plane=document.getElementById('vidPlane');
-        const muteAudio=document.getElementById('muteAudio');
-        const reduceMotion=document.getElementById('reduceMotion');
+        const intro   = document.getElementById('intro');
+        const start   = document.getElementById('startBtn');
+        const scene   = document.getElementById('scene');
+        const hud     = document.getElementById('hud');
+        const video   = document.getElementById('overlay');
+        const plane   = document.getElementById('vidPlane');
+        const muteCb  = document.getElementById('muteAudio');
+        const reduceCb= document.getElementById('reduceMotion');
+        const closer  = document.getElementById('closer');
+        const closeBtn= document.getElementById('closeBtn');
+        const restart = document.getElementById('restartBtn');
 
-        plane.setAttribute('geometry',`primitive:plane;width:${PLANE_WIDTH};height:${PLANE_HEIGHT}`);
-        plane.setAttribute('rotation',`0 ${ROT_Y} 0`);
-        hud.textContent="scanning…";
+        // prepare geometry + rotation
+        plane.setAttribute('geometry', `primitive:plane;width:${PLANE_WIDTH};height:${PLANE_HEIGHT}`);
+        plane.setAttribute('rotation', `0 ${ROT_Y} 0`);
+        hud.textContent = "scanning…";
 
-        muteAudio.addEventListener('change',()=>video.muted=muteAudio.checked);
+        let firstLoopDone = false;
 
-        start.addEventListener('click',()=>{
-          intro.style.display='none';
-          scene.style.display='block';
-          if(reduceMotion.checked){video.playbackRate=0.75;}
-          try{video.play();}catch(e){}
+        // --- START (user gesture enables audio) ---
+        start.addEventListener('click', async ()=>{
+          // show scene
+          intro.style.display = 'none';
+          scene.style.display = 'block';
+
+          // audio policy: unmute unless user checked mute
+          video.muted = !!muteCb.checked;
+
+          // respect reduced motion (slightly slower + shorter fade)
+          const dur = reduceCb.checked ? 150 : 450;
+          plane.setAttribute('animation__fadein', `property: material.opacity; from:0; to:1; dur:${dur}; easing:easeOutQuad; startEvents:startfade`);
+          video.playbackRate = reduceCb.checked ? 0.85 : 1.0;
+
+          // play once (we’ll show closer UI after it ends)
+          video.loop = false;
+
+          try { await video.play(); } catch(e) {
+            // if play fails, require another tap
+            video.muted = true; // fallback to muted for autoplay
+            await video.play().catch(()=>{ /* ignore */ });
+          }
         });
 
-        scene.addEventListener('targetFound',()=>{hud.textContent="target FOUND";try{video.play();}catch(e){}});
-        scene.addEventListener('targetLost',()=>{hud.textContent="target LOST — scanning…";});
-        window.addEventListener('touchstart',()=>{try{video.play();}catch(e){}},{once:true});
+        // --- target events ---
+        scene.addEventListener('targetFound', ()=>{
+          hud.textContent = "target FOUND";
+          plane.emit('startfade');
+          // ensure playback is rolling
+          video.play().catch(()=>{});
+        });
+
+        scene.addEventListener('targetLost', ()=>{
+          hud.textContent = "target LOST — scanning…";
+        });
+
+        // --- when first loop ends, pause and offer to close safely ---
+        video.addEventListener('ended', ()=>{
+          if (firstLoopDone) return;
+          firstLoopDone = true;
+          plane.emit('startfadeout');        // fade overlay out
+          setTimeout(()=>{                    // show closer after fade
+            closer.style.display = 'flex';
+          }, 320);
+        });
+
+        // --- close safely: stop AR + camera feed completely ---
+        const stopCameraCompletely = ()=>{
+          try{
+            const mindarSys = scene.systems['mindar-image-system'];
+            if (mindarSys && typeof mindarSys.stop === 'function') mindarSys.stop();
+
+            // try to stop underlying MediaStream tracks if accessible
+            const camVideo = mindarSys?.video;
+            const stream = camVideo?.srcObject || camVideo?.el?.srcObject || null;
+            if (stream && stream.getTracks) stream.getTracks().forEach(t=>t.stop());
+          }catch(e){}
+          // hide scene to release GPU
+          scene.style.display = 'none';
+          hud.textContent = "Animation closed";
+        };
+
+        closeBtn.addEventListener('click', ()=>{
+          stopCameraCompletely();
+          closer.innerHTML = `<div style="text-align:center">
+            <h3 style="margin:.2rem 0">Thanks for viewing</h3>
+            <p style="opacity:.9">You may safely put your device away.</p>
+          </div>`;
+        });
+
+        // optional restart without page reload
+        restart.addEventListener('click', ()=>{
+          closer.style.display = 'none';
+          firstLoopDone = false;
+          plane.setAttribute('material','opacity:0; transparent:true; shader:flat; src:#overlay');
+          scene.style.display = 'block';
+          // reset and play
+          video.currentTime = 0;
+          video.loop = false;
+          video.play().then(()=> plane.emit('startfade')).catch(()=>{});
+        });
+
+        // iOS extra safety: if user taps screen, try play again
+        window.addEventListener('touchstart', ()=>{ video.play().catch(()=>{}); }, {once:true});
       });
     </script>
   </a-scene>
