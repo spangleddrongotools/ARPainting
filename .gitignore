@@ -1,0 +1,14 @@
+# macOS
+.DS_Store
+
+# Resolve caches & temp
+assets/CacheClip/
+*.pfl
+*.renderCache
+
+# Source artwork / project files (optional to ignore)
+*.xcf
+assets/*.png
+assets/*.mp3
+assets/*.wav
+assets/Resolve/
