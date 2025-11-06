@@ -1,32 +1,72 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <title>AR Painting — Autoplay Fixed</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+  <meta name="theme-color" content="#00797a">
+  <title>AR Painting – Spangled Drongo Animation</title>
 
-  <!-- A-Frame -->
+  <!-- A-Frame + MindAR -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-  <!-- MindAR for A-Frame -->
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
-    html,body{margin:0;height:100%;overflow:hidden;background:transparent;}
-    canvas{background:transparent !important;}
-    #hud{position:fixed;top:10px;left:10px;z-index:9999;padding:6px 10px;border-radius:8px;
-         color:#fff;background:#0009;font:14px/1.2 -apple-system,BlinkMacSystemFont,Segoe UI,system-ui;}
+    html,body {
+      margin:0;height:100%;overflow:hidden;background:transparent;
+      font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,sans-serif;
+    }
+    canvas{background:transparent!important;}
+
+    /* translucent brand overlay */
+    #intro{
+      position:fixed;inset:0;
+      background:rgba(0,0,0,0.55);
+      display:flex;flex-direction:column;
+      justify-content:center;align-items:center;
+      color:#f5f3e7;text-align:center;padding:2rem;z-index:9999;
+      backdrop-filter:blur(4px);
+    }
+    #intro h2{color:#f8d36f;margin-bottom:.5em;}
+    #intro p{max-width:480px;margin:.3em 0;}
+    #intro label{display:block;margin-top:.5em;}
+    #startBtn{
+      margin-top:1.5em;padding:10px 24px;font-size:1rem;
+      border:none;border-radius:8px;
+      background:#00797a;color:#fff;cursor:pointer;transition:background .2s;
+    }
+    #startBtn:hover{background:#009e9f;}
+    #hud{
+      position:fixed;top:10px;left:10px;z-index:9000;
+      padding:6px 10px;border-radius:8px;
+      background:rgba(0,0,0,0.5);color:#fff;font-size:14px;
+    }
   </style>
 
   <script>
-    const PLANE_WIDTH  = 1.0;    
-    const PLANE_HEIGHT = 1.570;  // your final tuned height
-    const ROT_Y        = 0;      
+    const PLANE_WIDTH=1.0;
+    const PLANE_HEIGHT=1.57;
+    const ROT_Y=0;
   </script>
 </head>
 <body>
+
+  <!-- Accessibility / Consent Intro -->
+  <div id="intro">
+    <h2>⚠️  Accessibility & Safety Notice</h2>
+    <p>This animation includes <strong>flashing lights</strong> and <strong>sound effects</strong>.</p>
+    <p>Please ensure you're in a comfortable, safe environment before continuing.</p>
+    <p>When ready, tap <strong>Start</strong> and point your camera at the same painting that the QR code is on.</p>
+    <label><input type="checkbox" id="muteAudio"> Mute sound</label>
+    <label><input type="checkbox" id="reduceMotion"> Reduce flashing effects</label>
+    <button id="startBtn">Start Animation</button>
+  </div>
+
   <div id="hud">scanning…</div>
 
+  <!-- Hidden until Start -->
   <a-scene
-    mindar-image="imageTargetSrc: targets.mind; uiLoading:false; uiError:false; uiScanning:false; maxTrack:1"
+    style="display:none;"
+    mindar-image="imageTargetSrc: targets.mind; filterMinCF:0.0001; filterBeta:0.01; uiLoading:false; uiError:false; uiScanning:false; maxTrack:1"
     color-space="sRGB"
     embedded
     renderer="alpha:true; colorManagement:true; physicallyCorrectLights:true"
@@ -41,39 +81,39 @@
 
     <a-entity id="target" mindar-image-target="targetIndex:0">
       <a-entity id="vidPlane"
-        geometry="primitive: plane; width: 1; height: 1.570"
-        material="shader: flat; src: #overlay; transparent: false"
+        geometry="primitive:plane;width:1;height:1.57"
+        material="shader:flat;src:#overlay;transparent:false"
         position="0 0 0" rotation="0 0 0">
       </a-entity>
     </a-entity>
 
     <script>
-      document.addEventListener('DOMContentLoaded', ()=>{
-        const hud   = document.getElementById('hud');
-        const scene = document.querySelector('a-scene');
-        const video = document.getElementById('overlay');
-        const plane = document.getElementById('vidPlane');
+      document.addEventListener('DOMContentLoaded',()=>{
+        const intro=document.getElementById('intro');
+        const start=document.getElementById('startBtn');
+        const scene=document.querySelector('a-scene');
+        const hud=document.getElementById('hud');
+        const video=document.getElementById('overlay');
+        const plane=document.getElementById('vidPlane');
+        const muteAudio=document.getElementById('muteAudio');
+        const reduceMotion=document.getElementById('reduceMotion');
 
-        plane.setAttribute('geometry', `primitive: plane; width: ${PLANE_WIDTH}; height: ${PLANE_HEIGHT}`);
-        plane.setAttribute('rotation', `0 ${ROT_Y} 0`);
+        plane.setAttribute('geometry',`primitive:plane;width:${PLANE_WIDTH};height:${PLANE_HEIGHT}`);
+        plane.setAttribute('rotation',`0 ${ROT_Y} 0`);
+        hud.textContent="scanning…";
 
-        const set = t => hud.textContent = t;
-        set('scanning…');
+        muteAudio.addEventListener('change',()=>video.muted=muteAudio.checked);
 
-        const ensurePlay = () => {
-          try {
-            video.muted = true;
-            const p = video.play();
-            if (p !== undefined) p.catch(() => {});
-          } catch(e) {}
-        };
+        start.addEventListener('click',()=>{
+          intro.style.display='none';
+          scene.style.display='block';
+          if(reduceMotion.checked){video.playbackRate=0.75;}
+          try{video.play();}catch(e){}
+        });
 
-        scene.addEventListener('targetFound', ()=>{ set('target FOUND'); ensurePlay(); });
-        scene.addEventListener('targetLost',  ()=> set('target LOST — scanning…'));
-
-        // iOS autoplay helper: trigger on load or user interaction
-        window.addEventListener('load', ensurePlay, {once:true});
-        window.addEventListener('touchstart', ensurePlay, {once:true});
+        scene.addEventListener('targetFound',()=>{hud.textContent="target FOUND";try{video.play();}catch(e){}});
+        scene.addEventListener('targetLost',()=>{hud.textContent="target LOST — scanning…";});
+        window.addEventListener('touchstart',()=>{try{video.play();}catch(e){}},{once:true});
       });
     </script>
   </a-scene>
